@@ -1,0 +1,20 @@
+# Supreme High Crypto Court Frontend
+
+Next.js interface for the GenLayer Supreme High Crypto Court dApp.
+
+## Run
+
+```shell
+npm install
+npm run dev
+```
+
+## Environment
+
+```shell
+NEXT_PUBLIC_GENLAYER_RPC_URL=https://studio.genlayer.com/api
+NEXT_PUBLIC_GENLAYER_CHAIN_ID=61999
+NEXT_PUBLIC_GENLAYER_CHAIN_NAME=GenLayer Studio
+NEXT_PUBLIC_GENLAYER_SYMBOL=GEN
+NEXT_PUBLIC_CONTRACT_ADDRESS=0x...
+```
