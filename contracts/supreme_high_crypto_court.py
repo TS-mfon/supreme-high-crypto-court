@@ -249,7 +249,7 @@ class SupremeHighCryptoCourt(gl.Contract):
             evaluations_json=evaluations_json,
             final_score=final_score,
             verdict=verdict,
-            created_at=str(gl.message.timestamp_unix),
+            created_at=str(gl.block.timestamp),
         )
         self.case_ids.append(case_id)
         self.case_count = case_id + 1

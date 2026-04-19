@@ -6,7 +6,7 @@ A GenLayer dApp where users file crypto cases before an AI court. The intelligen
 
 - App: https://supreme-high-crypto-court.vercel.app
 - GitHub: https://github.com/TS-mfon/supreme-high-crypto-court
-- GenLayer contract: `0x4e14c801D3a888176e34c831C012B020e0526553`
+- GenLayer contract: `0x817d12c70037fa69679E0bdcD294DE35483969fF`
 
 ## Stack
 

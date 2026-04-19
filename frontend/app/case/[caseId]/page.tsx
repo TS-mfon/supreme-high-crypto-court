@@ -70,6 +70,7 @@ export default function CasePage() {
       <section className="verdict-grid" aria-label="Judge scores">
         {judges.map((judge) => {
           const evaluation = data.evaluations[judge.id as JudgeId];
+          const score = evaluation?.score ?? 0;
           return (
             <article className="verdict-card" key={judge.id}>
               <div className="verdict-card-top">
@@ -81,7 +82,10 @@ export default function CasePage() {
                   <h2>{judge.name}</h2>
                   <span>{evaluation?.verdict_word ?? "Filed"}</span>
                 </div>
-                <strong>{evaluation?.score ?? 0}/100</strong>
+                <strong className="score-pill">{score}/100</strong>
+              </div>
+              <div className="score-bar" aria-hidden="true">
+                <span style={{ width: `${score}%` }} />
               </div>
               <p className="key-point">{evaluation?.key_point ?? judge.profile}</p>
               <p>{evaluation?.reasoning ?? "No reasoning returned for this judge."}</p>

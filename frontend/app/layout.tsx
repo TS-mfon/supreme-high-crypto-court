@@ -7,7 +7,8 @@ export const metadata: Metadata = {
   description: "A GenLayer court where crypto cases are evaluated by AI profiles of eight Web3 thinkers.",
   manifest: "/site.webmanifest",
   icons: {
-    icon: [{ url: "/favicon.svg", type: "image/svg+xml" }],
+    icon: [{ url: "/favicon.svg?v=2", type: "image/svg+xml" }],
+    shortcut: [{ url: "/favicon.svg?v=2", type: "image/svg+xml" }],
   },
 };
 
