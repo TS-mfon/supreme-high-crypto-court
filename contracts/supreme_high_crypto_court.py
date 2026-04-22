@@ -10,7 +10,6 @@ ERROR_LLM = "[LLM_ERROR]"
 
 MIN_CASE_LENGTH = 50
 MAX_CASE_LENGTH = 2000
-FINAL_SCORE_TOLERANCE = 20
 
 JUDGE_IDS = (
     "vitalik_buterin",
@@ -112,79 +111,55 @@ def _normalized_verdict(value) -> str:
     return _verdict_for_score(_clamp_score(value))
 
 
+def _validate_leader_analysis(candidate) -> dict:
+    normalized = _normalize_panel(candidate)
+    if normalized["verdict"] != _verdict_for_score(normalized["final_score"]):
+        raise gl.vm.UserError(f"{ERROR_LLM} Verdict does not match final score")
+    return normalized
+
+
 def _panel_prompt(case_text: str) -> str:
     return f"""
 You are the neutral analysis engine for Supreme High Crypto Court.
 You are NOT the named people, and you must not claim they endorsed this result.
-Evaluate the submitted case through public, observable thinking profiles of all 8 Web3 figures.
+Evaluate the submitted case through public, observable thinking profiles of 8 Web3 figures.
 
 Case:
 \"\"\"{case_text}\"\"\"
 
 First decide whether the case is meaningfully about crypto, blockchain, Web3, DeFi, NFTs, DAOs,
-cryptographic protocols, tokenomics, decentralized AI, digital assets, L2s, wallets, exchanges,
-or related decentralized systems. Be generous for edge cases, but reject unrelated topics.
+cryptographic protocols, tokenomics, decentralized AI, wallets, exchanges, or adjacent on-chain systems.
+Reject unrelated topics.
 
-Use these condensed profiles derived from the court's web3 thinkers master cheat sheet:
-
-1. vitalik_buterin: guardian of decentralized legitimacy. Values credible neutrality, public goods,
-mechanism design, decentralization depth, cryptographic soundness, fairness, long-term sustainability.
-Scores poorly for plutocracy, central shortcuts, weak technical grounding, and short-term hype.
-Analytical, careful, nuanced, and public-goods oriented.
-
-2. gavin_wood: infrastructure architect and philosophical engineer. Values sovereignty through code,
-formal protocol correctness, permissionlessness, interoperability, and real decentralization.
-Scores poorly for centralized theater, sloppy architecture, and political compromise disguised as Web3.
-Precise, systems-level, technical, and skeptical.
-
-3. sergey_nazarov: trust-minimized coordination strategist. Values verifiable data, oracle integrity,
-hybrid smart contracts, institutional pathways, infrastructure completeness, and real-world integration.
-Scores poorly for pure speculation, vague decentralization, and missing data-verification layers.
-Methodical, market-aware, educational, and infrastructure-first.
-
-4. anatoly_yakovenko: performance-first systems engineer. Values throughput, latency reduction,
-hardware-aware scaling, pragmatic engineering, and permissionless global-scale usage.
-Scores poorly for slow systems, governance drag, and theoretical purity that cannot serve real demand.
-Direct, builder-focused, technical, and execution-heavy.
-
-5. eli_ben_sasson: mathematician of proof-based trust. Values computational integrity, ZK proofs,
-privacy, mathematical elegance, and provable correctness.
-Scores poorly for trust assumptions, privacy leakage, inefficient verification, and hand-waving.
-Academic, calm, proof-driven, and careful.
-
-6. illia_polosukhin: AI-blockchain synthesizer. Values open-source AI, user-owned data, UX,
-cross-domain synthesis, accessible onboarding, and user-owned intelligent agents.
-Scores poorly for centralized AI capture, bad UX, and crypto complexity that blocks adoption.
-Clear, future-oriented, collaborative, and research-plus-product minded.
-
-7. balaji_srinivasan: network-state and exit-rights strategist. Values individual agency,
-parallel institutions, censorship resistance, decentralized media, contrarian long bets, and internet-native sovereignty.
-Scores poorly for legacy-system reform, permission-seeking, and regulation-first proposals.
-Bold, conceptual, historical, provocative, and asymmetric-risk oriented.
-
-8. changpeng_zhao: fast global operator. Values financial freedom, mass adoption, product velocity,
-accessibility, inclusion, operational scale, and practical usefulness.
-Scores poorly for academic purity without users, high-friction UX, and ideas that cannot ship.
-Simple, direct, pragmatic, optimistic, and execution-first.
+Judge heuristics:
+- vitalik_buterin: decentralization, credible neutrality, mechanism design, long-term public goods
+- gavin_wood: sovereignty through code, protocol design, architectural rigor, interoperability
+- sergey_nazarov: verifiable data, oracle integrity, real-world trust minimization
+- anatoly_yakovenko: performance, throughput, low latency, practical engineering
+- eli_ben_sasson: proofs, privacy, computational integrity, mathematical soundness
+- illia_polosukhin: open AI, user ownership, usability, intelligent agents
+- balaji_srinivasan: exit rights, internet-native sovereignty, parallel institutions
+- changpeng_zhao: adoption, speed, accessibility, operational pragmatism
 
 Return ONLY valid JSON with this exact shape:
 {{
   "is_crypto_case": true,
   "crypto_relevance_reason": "short reason",
   "evaluations": {{
-    "vitalik_buterin": {{"score": 0, "reasoning": "2 sentences", "key_point": "one point", "verdict_word": "one word"}},
-    "gavin_wood": {{"score": 0, "reasoning": "2 sentences", "key_point": "one point", "verdict_word": "one word"}},
-    "sergey_nazarov": {{"score": 0, "reasoning": "2 sentences", "key_point": "one point", "verdict_word": "one word"}},
-    "anatoly_yakovenko": {{"score": 0, "reasoning": "2 sentences", "key_point": "one point", "verdict_word": "one word"}},
-    "eli_ben_sasson": {{"score": 0, "reasoning": "2 sentences", "key_point": "one point", "verdict_word": "one word"}},
-    "illia_polosukhin": {{"score": 0, "reasoning": "2 sentences", "key_point": "one point", "verdict_word": "one word"}},
-    "balaji_srinivasan": {{"score": 0, "reasoning": "2 sentences", "key_point": "one point", "verdict_word": "one word"}},
-    "changpeng_zhao": {{"score": 0, "reasoning": "2 sentences", "key_point": "one point", "verdict_word": "one word"}}
+    "vitalik_buterin": {{"score": 0, "reasoning": "1 short sentence", "key_point": "short phrase", "verdict_word": "single word"}},
+    "gavin_wood": {{"score": 0, "reasoning": "1 short sentence", "key_point": "short phrase", "verdict_word": "single word"}},
+    "sergey_nazarov": {{"score": 0, "reasoning": "1 short sentence", "key_point": "short phrase", "verdict_word": "single word"}},
+    "anatoly_yakovenko": {{"score": 0, "reasoning": "1 short sentence", "key_point": "short phrase", "verdict_word": "single word"}},
+    "eli_ben_sasson": {{"score": 0, "reasoning": "1 short sentence", "key_point": "short phrase", "verdict_word": "single word"}},
+    "illia_polosukhin": {{"score": 0, "reasoning": "1 short sentence", "key_point": "short phrase", "verdict_word": "single word"}},
+    "balaji_srinivasan": {{"score": 0, "reasoning": "1 short sentence", "key_point": "short phrase", "verdict_word": "single word"}},
+    "changpeng_zhao": {{"score": 0, "reasoning": "1 short sentence", "key_point": "short phrase", "verdict_word": "single word"}}
   }}
 }}
 
-Scores must be integers from 0 to 100, preferably in increments of 5. If the case is not crypto-related, set is_crypto_case to false
-and score each profile 0 with a short reason explaining why the court lacks jurisdiction.
+Scores must be chosen only from 20, 40, 60, 80, 100.
+Keep every string short and plain.
+If the case is not crypto-related, set is_crypto_case to false and score each profile 0.
 """
 
 
@@ -203,29 +178,17 @@ class SupremeHighCryptoCourt(gl.Contract):
 
         def leader_fn():
             raw = gl.nondet.exec_prompt(prompt, response_format="json")
-            return _normalize_panel(raw)
+            return _validate_leader_analysis(raw)
 
         def validator_fn(leaders_res: gl.vm.Result) -> bool:
             if not isinstance(leaders_res, gl.vm.Return):
                 return False
 
-            validator_result = leader_fn()
-            leader_result = leaders_res.calldata
-
-            if leader_result["is_crypto_case"] != validator_result["is_crypto_case"]:
+            try:
+                _validate_leader_analysis(leaders_res.calldata)
+                return True
+            except Exception:
                 return False
-
-            leader_verdict = _normalized_verdict(leader_result["final_score"])
-            validator_verdict = _normalized_verdict(validator_result["final_score"])
-            if leader_verdict != validator_verdict:
-                return False
-
-            leader_final = _clamp_score(leader_result["final_score"])
-            validator_final = _clamp_score(validator_result["final_score"])
-            if abs(leader_final - validator_final) > FINAL_SCORE_TOLERANCE:
-                return False
-
-            return True
 
         return gl.vm.run_nondet_unsafe(leader_fn, validator_fn)
 
