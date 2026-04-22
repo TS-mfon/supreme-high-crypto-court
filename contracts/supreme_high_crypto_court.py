@@ -10,7 +10,7 @@ ERROR_LLM = "[LLM_ERROR]"
 
 MIN_CASE_LENGTH = 50
 MAX_CASE_LENGTH = 2000
-SCORE_TOLERANCE = 12
+FINAL_SCORE_TOLERANCE = 20
 
 JUDGE_IDS = (
     "vitalik_buterin",
@@ -108,6 +108,10 @@ def _normalize_panel(raw: dict) -> dict:
     }
 
 
+def _normalized_verdict(value) -> str:
+    return _verdict_for_score(_clamp_score(value))
+
+
 def _panel_prompt(case_text: str) -> str:
     return f"""
 You are the neutral analysis engine for Supreme High Crypto Court.
@@ -179,7 +183,7 @@ Return ONLY valid JSON with this exact shape:
   }}
 }}
 
-Scores must be integers from 0 to 100. If the case is not crypto-related, set is_crypto_case to false
+Scores must be integers from 0 to 100, preferably in increments of 5. If the case is not crypto-related, set is_crypto_case to false
 and score each profile 0 with a short reason explaining why the court lacks jurisdiction.
 """
 
@@ -211,14 +215,15 @@ class SupremeHighCryptoCourt(gl.Contract):
             if leader_result["is_crypto_case"] != validator_result["is_crypto_case"]:
                 return False
 
-            if _verdict_for_score(int(leader_result["final_score"])) != _verdict_for_score(int(validator_result["final_score"])):
+            leader_verdict = _normalized_verdict(leader_result["final_score"])
+            validator_verdict = _normalized_verdict(validator_result["final_score"])
+            if leader_verdict != validator_verdict:
                 return False
 
-            for judge_id in JUDGE_IDS:
-                leader_score = int(leader_result["evaluations"][judge_id]["score"])
-                validator_score = int(validator_result["evaluations"][judge_id]["score"])
-                if abs(leader_score - validator_score) > SCORE_TOLERANCE:
-                    return False
+            leader_final = _clamp_score(leader_result["final_score"])
+            validator_final = _clamp_score(validator_result["final_score"])
+            if abs(leader_final - validator_final) > FINAL_SCORE_TOLERANCE:
+                return False
 
             return True
 
