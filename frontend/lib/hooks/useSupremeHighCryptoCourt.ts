@@ -83,7 +83,7 @@ export function useSubmitCase() {
   const router = useRouter();
 
   return useMutation({
-    mutationFn: async (caseText: string) => {
+    mutationFn: async ({ caseText, mode }: { caseText: string; mode: "standard" | "critical" }) => {
       if (!contract) {
         throw new Error("Contract address is not configured. Set NEXT_PUBLIC_CONTRACT_ADDRESS.");
       }
@@ -91,7 +91,7 @@ export function useSubmitCase() {
         throw new Error("Connect your wallet before filing a case.");
       }
 
-      const submitted = await contract.submitCase(caseText);
+      const submitted = await contract.submitCase(caseText, mode);
       let caseId = submitted.caseId;
 
       if (caseId === null && submitted.recoveredCase) {

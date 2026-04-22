@@ -26,7 +26,7 @@ function GavelMark() {
   );
 }
 
-function DeliberationCurtain({ active }: { active: boolean }) {
+function DeliberationCurtain({ active, mode }: { active: boolean; mode: "standard" | "critical" }) {
   if (!active) {
     return null;
   }
@@ -40,6 +40,9 @@ function DeliberationCurtain({ active }: { active: boolean }) {
         <p className="eyebrow">Curtains closed</p>
         <h2>The jury is deliberating.</h2>
         <p>Eight judge profiles are weighing the case through GenLayer consensus.</p>
+        <p className="deliberation-mode">
+          {mode === "critical" ? "Critical analysis chamber" : "Standard verdict chamber"}
+        </p>
         <div className="thinking-row">
           {judges.map((judge, index) => (
             <span key={judge.id} style={{ animationDelay: `${index * 120}ms` }}>
@@ -54,6 +57,7 @@ function DeliberationCurtain({ active }: { active: boolean }) {
 
 export default function Home() {
   const [caseText, setCaseText] = useState("");
+  const [pendingMode, setPendingMode] = useState<"standard" | "critical">("standard");
   const wallet = useWallet();
   const submitCase = useSubmitCase();
   const contractAddress = getContractAddress();
@@ -63,17 +67,22 @@ export default function Home() {
     return trimmedLength >= 50 && trimmedLength <= 2000 && wallet.isConnected && !!contractAddress;
   }, [trimmedLength, wallet.isConnected, contractAddress]);
 
-  const onSubmit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const submit = (mode: "standard" | "critical") => {
     if (!canSubmit) {
       return;
     }
-    submitCase.mutate(caseText.trim());
+    setPendingMode(mode);
+    submitCase.mutate({ caseText: caseText.trim(), mode });
+  };
+
+  const onSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    submit("standard");
   };
 
   return (
     <main className="court-shell">
-      <DeliberationCurtain active={submitCase.isPending} />
+      <DeliberationCurtain active={submitCase.isPending} mode={pendingMode} />
 
       <nav className="court-nav" aria-label="Court navigation">
         <Link href="/" className="brand-lockup">
@@ -156,9 +165,19 @@ export default function Home() {
               <span className={trimmedLength > 2000 || (trimmedLength > 0 && trimmedLength < 50) ? "bad-count" : ""}>
                 {trimmedLength} / 2000 characters
               </span>
-              <button type="submit" className="primary-action" disabled={!canSubmit || submitCase.isPending}>
-                {submitCase.isPending ? "Curtains closing..." : "Strike the gavel"}
-              </button>
+              <div className="action-row">
+                <button type="submit" className="primary-action" disabled={!canSubmit || submitCase.isPending}>
+                  {submitCase.isPending && pendingMode === "standard" ? "Curtains closing..." : "Strike the gavel"}
+                </button>
+                <button
+                  type="button"
+                  className="secondary-action"
+                  disabled={!canSubmit || submitCase.isPending}
+                  onClick={() => submit("critical")}
+                >
+                  {submitCase.isPending && pendingMode === "critical" ? "Running analysis..." : "Critical analysis"}
+                </button>
+              </div>
             </div>
             {!wallet.isConnected && <p className="notice">Connect a wallet before filing a case.</p>}
             {!contractAddress && <p className="notice">Contract address is not configured yet.</p>}

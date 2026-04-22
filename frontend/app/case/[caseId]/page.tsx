@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { judges, judgesById, type JudgeId } from "@/lib/judges";
+import type { QuantitativeAxes } from "@/lib/contracts/types";
 import { useCourtCase } from "@/lib/hooks/useSupremeHighCryptoCourt";
 
 function formatDate(value: string) {
@@ -13,6 +14,14 @@ function formatDate(value: string) {
   }
   return new Date(timestamp * 1000).toLocaleString();
 }
+
+const axisLabels: Record<keyof QuantitativeAxes, string> = {
+  innovation: "Innovation",
+  execution: "Execution",
+  decentralization: "Decentralization",
+  adoption: "Adoption",
+  strategic_fit: "Strategic fit",
+};
 
 export default function CasePage() {
   const params = useParams<{ caseId: string }>();
@@ -55,6 +64,7 @@ export default function CasePage() {
       <section className="verdict-header">
         <p className="eyebrow">Case #{data.case_id}</p>
         <h1>{data.verdict}</h1>
+        <span className="mode-badge">{data.analysis_mode === "critical" ? "Critical analysis" : "Standard verdict"}</span>
         <div className="score-medallion">
           <strong>{data.final_score}</strong>
           <span>/100</span>
@@ -66,6 +76,20 @@ export default function CasePage() {
         <p className="eyebrow">Filed brief</p>
         <blockquote>{data.case_text}</blockquote>
       </section>
+
+      {data.analysis_mode === "critical" && data.critical_summary && (
+        <section className="metrics-panel">
+          <p className="eyebrow">Critical summary</p>
+          <div className="metrics-grid">
+            {Object.entries(data.critical_summary).map(([axis, score]) => (
+              <article className="metric-card" key={axis}>
+                <span>{axisLabels[axis as keyof QuantitativeAxes]}</span>
+                <strong>{score}/100</strong>
+              </article>
+            ))}
+          </div>
+        </section>
+      )}
 
       <section className="verdict-grid" aria-label="Judge scores">
         {judges.map((judge) => {
@@ -88,6 +112,16 @@ export default function CasePage() {
                 <span style={{ width: `${score}%` }} />
               </div>
               <p className="key-point">{evaluation?.key_point ?? judge.profile}</p>
+              {data.analysis_mode === "critical" && evaluation?.quantitative_axes && (
+                <div className="judge-axes">
+                  {Object.entries(evaluation.quantitative_axes).map(([axis, axisScore]) => (
+                    <div className="axis-chip" key={axis}>
+                      <span>{axisLabels[axis as keyof QuantitativeAxes]}</span>
+                      <strong>{axisScore}</strong>
+                    </div>
+                  ))}
+                </div>
+              )}
               <p>{evaluation?.reasoning ?? "No reasoning returned for this judge."}</p>
             </article>
           );

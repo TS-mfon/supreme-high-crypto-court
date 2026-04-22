@@ -25,7 +25,9 @@ function normalizeCase(value: any): CourtCase {
     case_id: Number(plain.case_id),
     submitter: String(plain.submitter),
     case_text: String(plain.case_text),
+    analysis_mode: plain.analysis_mode === "critical" ? "critical" : "standard",
     evaluations: plain.evaluations,
+    critical_summary: plain.critical_summary ?? null,
     final_score: Number(plain.final_score),
     verdict: String(plain.verdict),
     created_at: String(plain.created_at),
@@ -37,6 +39,7 @@ function normalizeSummary(value: any): CourtCaseSummary {
   return {
     case_id: Number(plain.case_id),
     submitter: String(plain.submitter),
+    analysis_mode: plain.analysis_mode === "critical" ? "critical" : "standard",
     case_preview: String(plain.case_preview),
     final_score: Number(plain.final_score),
     verdict: String(plain.verdict),
@@ -46,6 +49,30 @@ function normalizeSummary(value: any): CourtCaseSummary {
 
 function isObject(value: unknown): value is Record<string, any> {
   return !!value && typeof value === "object" && !Array.isArray(value);
+}
+
+function toQuantitativeAxes(value: unknown) {
+  if (!isObject(value)) {
+    return null;
+  }
+
+  const innovation = Number(value.innovation);
+  const execution = Number(value.execution);
+  const decentralization = Number(value.decentralization);
+  const adoption = Number(value.adoption);
+  const strategic_fit = Number(value.strategic_fit);
+
+  if (
+    !Number.isFinite(innovation) ||
+    !Number.isFinite(execution) ||
+    !Number.isFinite(decentralization) ||
+    !Number.isFinite(adoption) ||
+    !Number.isFinite(strategic_fit)
+  ) {
+    return null;
+  }
+
+  return { innovation, execution, decentralization, adoption, strategic_fit };
 }
 
 function extractJsonObject(text: string): string | null {
@@ -65,7 +92,9 @@ function normalizeRecoveredCase(value: any, caseText = ""): RecoveredCourtCase |
   return {
     case_id: value.case_id === undefined || value.case_id === null ? null : Number(value.case_id),
     case_text: typeof value.case_text === "string" ? value.case_text : caseText,
+    analysis_mode: value.analysis_mode === "critical" ? "critical" : "standard",
     evaluations: value.evaluations as Record<JudgeId, any>,
+    critical_summary: toQuantitativeAxes(value.critical_summary),
     final_score: Number(value.final_score ?? 0),
     verdict: String(value.verdict ?? "UNAVAILABLE"),
     created_at: String(value.created_at ?? "0"),
@@ -228,6 +257,7 @@ export default class SupremeHighCryptoCourt {
 
   async submitCase(
     caseText: string,
+    mode: "standard" | "critical" = "standard",
   ): Promise<{
     txHash: string;
     caseId: number | null;
@@ -236,7 +266,7 @@ export default class SupremeHighCryptoCourt {
   }> {
     const txHash = await this.client.writeContract({
       address: this.contractAddress,
-      functionName: "submit_case",
+      functionName: mode === "critical" ? "submit_critical_case" : "submit_case",
       args: [caseText],
       value: BigInt(0),
     });

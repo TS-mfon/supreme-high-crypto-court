@@ -38,7 +38,10 @@ export default function ArchivesPage() {
         {recentCases.data?.map((item) => (
           <Link className="archive-row" href={`/case/${item.case_id}`} key={item.case_id}>
             <span>#{item.case_id}</span>
-            <strong>{item.verdict}</strong>
+            <div className="archive-verdict">
+              <strong>{item.verdict}</strong>
+              <small>{item.analysis_mode === "critical" ? "Critical analysis" : "Standard verdict"}</small>
+            </div>
             <p>{item.case_preview}</p>
             <em>{item.final_score}/100</em>
             <time>{formatDate(item.created_at)}</time>

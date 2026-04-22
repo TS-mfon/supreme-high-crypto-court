@@ -1,12 +1,12 @@
 # Supreme High Crypto Court
 
-A GenLayer dApp where users file crypto cases before an AI court. The intelligent contract evaluates each case through eight public Web3 thinker profiles and stores the ruling on-chain.
+A GenLayer dApp where users file crypto cases before an AI court. The intelligent contract evaluates each case through eight public Web3 thinker profiles and supports both standard verdicts and structured critical analysis.
 
 ## Live Deployment
 
 - App: https://supreme-high-crypto-court.vercel.app
 - GitHub: https://github.com/TS-mfon/supreme-high-crypto-court
-- GenLayer contract: `0x65DCBB97B0E4aEABF0CbFF18E43b2FF7C2FE7052`
+- GenLayer contract: `0xBb6904F4478Dd29281B901808c265B2Fb874a0FC`
 
 ## Stack
 

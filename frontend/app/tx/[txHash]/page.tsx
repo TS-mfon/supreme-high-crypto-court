@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { judges, judgesById, type JudgeId } from "@/lib/judges";
 import { useCourtTransaction } from "@/lib/hooks/useSupremeHighCryptoCourt";
-import type { RecoveredCourtCase, TransactionReceipt } from "@/lib/contracts/types";
+import type { QuantitativeAxes, RecoveredCourtCase, TransactionReceipt } from "@/lib/contracts/types";
 
 function isObject(value: unknown): value is Record<string, any> {
   return !!value && typeof value === "object" && !Array.isArray(value);
@@ -19,6 +19,38 @@ function extractJsonObject(text: string): string | null {
   }
   return text.slice(start, end + 1);
 }
+
+function toQuantitativeAxes(value: unknown): QuantitativeAxes | null {
+  if (!isObject(value)) {
+    return null;
+  }
+
+  const innovation = Number(value.innovation);
+  const execution = Number(value.execution);
+  const decentralization = Number(value.decentralization);
+  const adoption = Number(value.adoption);
+  const strategic_fit = Number(value.strategic_fit);
+
+  if (
+    !Number.isFinite(innovation) ||
+    !Number.isFinite(execution) ||
+    !Number.isFinite(decentralization) ||
+    !Number.isFinite(adoption) ||
+    !Number.isFinite(strategic_fit)
+  ) {
+    return null;
+  }
+
+  return { innovation, execution, decentralization, adoption, strategic_fit };
+}
+
+const axisLabels: Record<keyof QuantitativeAxes, string> = {
+  innovation: "Innovation",
+  execution: "Execution",
+  decentralization: "Decentralization",
+  adoption: "Adoption",
+  strategic_fit: "Strategic fit",
+};
 
 function recoverCaseFromReceipt(receipt?: TransactionReceipt): RecoveredCourtCase | null {
   const leaderReceipts = Array.isArray(receipt?.consensus_data?.leader_receipt)
@@ -41,7 +73,9 @@ function recoverCaseFromReceipt(receipt?: TransactionReceipt): RecoveredCourtCas
             return {
               case_id: null,
               case_text: "",
+              analysis_mode: parsed.analysis_mode === "critical" ? "critical" : "standard",
               evaluations: parsed.evaluations as Record<JudgeId, any>,
+              critical_summary: toQuantitativeAxes(parsed.critical_summary),
               final_score: Number(parsed.final_score ?? 0),
               verdict: String(parsed.verdict ?? "UNAVAILABLE"),
               created_at: "0",
@@ -151,6 +185,7 @@ export default function TransactionResultPage() {
       <section className="verdict-header">
         <p className="eyebrow">Recovered from transaction</p>
         <h1>{recovered.verdict}</h1>
+        <span className="mode-badge">{recovered.analysis_mode === "critical" ? "Critical analysis" : "Standard verdict"}</span>
         <div className="score-medallion">
           <strong>{recovered.final_score}</strong>
           <span>/100</span>
@@ -167,6 +202,20 @@ export default function TransactionResultPage() {
         <section className="case-transcript">
           <p className="eyebrow">Contract runtime error</p>
           <blockquote>{runtimeError.split("\n")[0]}</blockquote>
+        </section>
+      )}
+
+      {recovered.analysis_mode === "critical" && recovered.critical_summary && (
+        <section className="metrics-panel">
+          <p className="eyebrow">Critical summary</p>
+          <div className="metrics-grid">
+            {Object.entries(recovered.critical_summary).map(([axis, score]) => (
+              <article className="metric-card" key={axis}>
+                <span>{axisLabels[axis as keyof QuantitativeAxes]}</span>
+                <strong>{score}/100</strong>
+              </article>
+            ))}
+          </div>
         </section>
       )}
 
@@ -191,6 +240,16 @@ export default function TransactionResultPage() {
                 <span style={{ width: `${score}%` }} />
               </div>
               <p className="key-point">{evaluation?.key_point ?? judge.profile}</p>
+              {recovered.analysis_mode === "critical" && evaluation?.quantitative_axes && (
+                <div className="judge-axes">
+                  {Object.entries(evaluation.quantitative_axes).map(([axis, axisScore]) => (
+                    <div className="axis-chip" key={axis}>
+                      <span>{axisLabels[axis as keyof QuantitativeAxes]}</span>
+                      <strong>{axisScore}</strong>
+                    </div>
+                  ))}
+                </div>
+              )}
               <p>{evaluation?.reasoning ?? "No reasoning returned for this judge."}</p>
             </article>
           );
