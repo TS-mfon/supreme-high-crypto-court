@@ -607,6 +607,15 @@ textarea:focus {
   text-align: center;
 }
 
+.muted-hash {
+  margin: 0;
+  max-width: 100%;
+  color: var(--muted);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
 .score-medallion {
   display: flex;
   align-items: baseline;

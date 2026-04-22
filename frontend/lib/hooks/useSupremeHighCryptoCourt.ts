@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import SupremeHighCryptoCourt from "../contracts/SupremeHighCryptoCourt";
 import { getContractAddress, getStudioUrl } from "../genlayer/client";
 import { useWallet } from "../genlayer/wallet";
-import type { CourtCase, CourtCaseSummary } from "../contracts/types";
+import type { CourtCase, CourtCaseSummary, TransactionReceipt } from "../contracts/types";
 
 export function useCourtContract(): SupremeHighCryptoCourt | null {
   const { address } = useWallet();
@@ -53,6 +53,29 @@ export function useRecentCases(limit = 12) {
   });
 }
 
+export function useCourtTransaction(txHash: string | null) {
+  const contract = useCourtContract();
+
+  return useQuery<TransactionReceipt, Error>({
+    queryKey: ["court-transaction", txHash],
+    queryFn: async () => {
+      if (!contract || !txHash) {
+        throw new Error("Transaction hash is not available.");
+      }
+      return contract.getTransactionReceipt(txHash);
+    },
+    enabled: !!contract && !!txHash,
+    refetchInterval: (query) => {
+      const statusName = query.state.data?.statusName;
+      if (!statusName || ["PENDING", "PROPOSING", "COMMITTING", "REVEALING"].includes(statusName)) {
+        return 5000;
+      }
+      return false;
+    },
+    staleTime: 1000,
+  });
+}
+
 export function useSubmitCase() {
   const contract = useCourtContract();
   const { address } = useWallet();
@@ -71,6 +94,13 @@ export function useSubmitCase() {
       const submitted = await contract.submitCase(caseText);
       let caseId = submitted.caseId;
 
+      if (caseId === null && submitted.recoveredCase) {
+        return {
+          mode: "receipt" as const,
+          txHash: submitted.txHash,
+        };
+      }
+
       if (caseId === null) {
         const recent = await contract.getRecentCases(10);
         const match = recent.find((item) => item.submitter.toLowerCase() === address.toLowerCase());
@@ -78,14 +108,24 @@ export function useSubmitCase() {
       }
 
       if (caseId === null) {
-        throw new Error("Case was accepted, but the case id could not be recovered. Open Archives to find it.");
+        return {
+          mode: "receipt" as const,
+          txHash: submitted.txHash,
+        };
       }
 
-      return caseId;
+      return {
+        mode: "case" as const,
+        caseId,
+      };
     },
-    onSuccess: (caseId) => {
+    onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ["court-cases"] });
-      router.push(`/case/${caseId}`);
+      if (result.mode === "case") {
+        router.push(`/case/${result.caseId}`);
+        return;
+      }
+      router.push(`/tx/${result.txHash}`);
     },
   });
 }
