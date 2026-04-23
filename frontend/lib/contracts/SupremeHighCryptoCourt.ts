@@ -1,6 +1,13 @@
 import { createClient, simplifyTransactionReceipt } from "genlayer-js";
 import { studionet } from "genlayer-js/chains";
-import type { CourtCase, CourtCaseSummary, RecoveredCourtCase, TransactionReceipt } from "./types";
+import type {
+  AnalysisMode,
+  CourtCase,
+  CourtCaseSummary,
+  MarketSnapshot,
+  RecoveredCourtCase,
+  TransactionReceipt,
+} from "./types";
 import type { JudgeId } from "../judges";
 
 function toPlain(value: any): any {
@@ -25,9 +32,11 @@ function normalizeCase(value: any): CourtCase {
     case_id: Number(plain.case_id),
     submitter: String(plain.submitter),
     case_text: String(plain.case_text),
-    analysis_mode: plain.analysis_mode === "critical" ? "critical" : "standard",
+    analysis_mode: toAnalysisMode(plain.analysis_mode),
     evaluations: plain.evaluations,
-    critical_summary: plain.critical_summary ?? null,
+    quant_summary: toQuantitativeAxes(plain.quant_summary),
+    narrative_summary: toNarrativeSummary(plain.narrative_summary),
+    market_snapshot: toMarketSnapshot(plain.market_snapshot),
     final_score: Number(plain.final_score),
     verdict: String(plain.verdict),
     created_at: String(plain.created_at),
@@ -39,7 +48,7 @@ function normalizeSummary(value: any): CourtCaseSummary {
   return {
     case_id: Number(plain.case_id),
     submitter: String(plain.submitter),
-    analysis_mode: plain.analysis_mode === "critical" ? "critical" : "standard",
+    analysis_mode: toAnalysisMode(plain.analysis_mode),
     case_preview: String(plain.case_preview),
     final_score: Number(plain.final_score),
     verdict: String(plain.verdict),
@@ -75,6 +84,43 @@ function toQuantitativeAxes(value: unknown) {
   return { innovation, execution, decentralization, adoption, strategic_fit };
 }
 
+function toAnalysisMode(value: unknown): AnalysisMode {
+  return value === "critical" || value === "comprehensive" || value === "market" ? value : "standard";
+}
+
+function toMarketSnapshot(value: unknown): MarketSnapshot | null {
+  if (!isObject(value) || !isObject(value.top_assets)) {
+    return null;
+  }
+
+  const topAssets: Record<string, { price: number; range_position: number }> = {};
+  for (const [symbol, asset] of Object.entries(value.top_assets)) {
+    if (!isObject(asset)) {
+      return null;
+    }
+    const price = Number(asset.price);
+    const rangePosition = Number(asset.range_position);
+    if (!Number.isFinite(price) || !Number.isFinite(rangePosition)) {
+      return null;
+    }
+    topAssets[String(symbol)] = { price, range_position: rangePosition };
+  }
+
+  return {
+    market_mood: String(value.market_mood ?? ""),
+    market_cap_signal: Number(value.market_cap_signal ?? 0),
+    volume_signal: Number(value.volume_signal ?? 0),
+    top_assets: topAssets,
+  };
+}
+
+function toNarrativeSummary(value: unknown) {
+  if (!isObject(value)) {
+    return null;
+  }
+  return toPlain(value);
+}
+
 function extractJsonObject(text: string): string | null {
   const start = text.indexOf("{");
   const end = text.lastIndexOf("}");
@@ -92,9 +138,11 @@ function normalizeRecoveredCase(value: any, caseText = ""): RecoveredCourtCase |
   return {
     case_id: value.case_id === undefined || value.case_id === null ? null : Number(value.case_id),
     case_text: typeof value.case_text === "string" ? value.case_text : caseText,
-    analysis_mode: value.analysis_mode === "critical" ? "critical" : "standard",
+    analysis_mode: toAnalysisMode(value.analysis_mode),
     evaluations: value.evaluations as Record<JudgeId, any>,
-    critical_summary: toQuantitativeAxes(value.critical_summary),
+    quant_summary: toQuantitativeAxes(value.quant_summary),
+    narrative_summary: toNarrativeSummary(value.narrative_summary),
+    market_snapshot: toMarketSnapshot(value.market_snapshot),
     final_score: Number(value.final_score ?? 0),
     verdict: String(value.verdict ?? "UNAVAILABLE"),
     created_at: String(value.created_at ?? "0"),
@@ -257,7 +305,7 @@ export default class SupremeHighCryptoCourt {
 
   async submitCase(
     caseText: string,
-    mode: "standard" | "critical" = "standard",
+    mode: AnalysisMode = "standard",
   ): Promise<{
     txHash: string;
     caseId: number | null;
@@ -266,7 +314,14 @@ export default class SupremeHighCryptoCourt {
   }> {
     const txHash = await this.client.writeContract({
       address: this.contractAddress,
-      functionName: mode === "critical" ? "submit_critical_case" : "submit_case",
+      functionName:
+        mode === "critical"
+          ? "submit_critical_case"
+          : mode === "comprehensive"
+            ? "submit_comprehensive_case"
+            : mode === "market"
+              ? "submit_market_case"
+              : "submit_case",
       args: [caseText],
       value: BigInt(0),
     });

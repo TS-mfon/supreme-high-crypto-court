@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import SupremeHighCryptoCourt from "../contracts/SupremeHighCryptoCourt";
 import { getContractAddress, getStudioUrl } from "../genlayer/client";
 import { useWallet } from "../genlayer/wallet";
-import type { CourtCase, CourtCaseSummary, TransactionReceipt } from "../contracts/types";
+import type { AnalysisMode, CourtCase, CourtCaseSummary, TransactionReceipt } from "../contracts/types";
 
 export function useCourtContract(): SupremeHighCryptoCourt | null {
   const { address } = useWallet();
@@ -83,7 +83,7 @@ export function useSubmitCase() {
   const router = useRouter();
 
   return useMutation({
-    mutationFn: async ({ caseText, mode }: { caseText: string; mode: "standard" | "critical" }) => {
+    mutationFn: async ({ caseText, mode }: { caseText: string; mode: AnalysisMode }) => {
       if (!contract) {
         throw new Error("Contract address is not configured. Set NEXT_PUBLIC_CONTRACT_ADDRESS.");
       }

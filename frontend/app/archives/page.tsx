@@ -12,6 +12,13 @@ function formatDate(value: string) {
   return new Date(timestamp * 1000).toLocaleDateString();
 }
 
+function modeLabel(mode: string) {
+  if (mode === "critical") return "Critical analysis";
+  if (mode === "comprehensive") return "Comprehensive analysis";
+  if (mode === "market") return "Market sentiment";
+  return "Standard verdict";
+}
+
 export default function ArchivesPage() {
   const contractAddress = getContractAddress();
   const recentCases = useRecentCases(20);
@@ -40,7 +47,7 @@ export default function ArchivesPage() {
             <span>#{item.case_id}</span>
             <div className="archive-verdict">
               <strong>{item.verdict}</strong>
-              <small>{item.analysis_mode === "critical" ? "Critical analysis" : "Standard verdict"}</small>
+              <small>{modeLabel(item.analysis_mode)}</small>
             </div>
             <p>{item.case_preview}</p>
             <em>{item.final_score}/100</em>

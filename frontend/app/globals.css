@@ -691,6 +691,14 @@ textarea:focus {
   gap: 12px;
 }
 
+.narrative-grid,
+.market-assets {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+
 .metric-card {
   display: grid;
   gap: 8px;
@@ -708,6 +716,21 @@ textarea:focus {
 .metric-card strong {
   color: var(--gold);
   font-size: 26px;
+}
+
+.metric-card p,
+.metric-card ul {
+  margin: 0;
+}
+
+.metric-card.wide {
+  width: 100%;
+  margin: 0;
+}
+
+.narrative-list {
+  padding-left: 18px;
+  color: var(--ink);
 }
 
 blockquote {
@@ -895,6 +918,11 @@ blockquote {
   .metrics-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .narrative-grid,
+  .market-assets {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 760px) {
@@ -938,6 +966,11 @@ blockquote {
   }
 
   .metrics-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .narrative-grid,
+  .market-assets {
     grid-template-columns: 1fr;
   }
 

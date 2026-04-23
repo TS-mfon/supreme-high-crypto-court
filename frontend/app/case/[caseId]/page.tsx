@@ -4,7 +4,13 @@ import Image from "next/image";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { judges, judgesById, type JudgeId } from "@/lib/judges";
-import type { QuantitativeAxes } from "@/lib/contracts/types";
+import type {
+  AnalysisMode,
+  ComprehensiveNarrative,
+  MarketNarrative,
+  MarketSnapshot,
+  QuantitativeAxes,
+} from "@/lib/contracts/types";
 import { useCourtCase } from "@/lib/hooks/useSupremeHighCryptoCourt";
 
 function formatDate(value: string) {
@@ -15,6 +21,13 @@ function formatDate(value: string) {
   return new Date(timestamp * 1000).toLocaleString();
 }
 
+function modeLabel(mode: AnalysisMode) {
+  if (mode === "critical") return "Critical analysis";
+  if (mode === "comprehensive") return "Comprehensive analysis";
+  if (mode === "market") return "Market sentiment";
+  return "Standard verdict";
+}
+
 const axisLabels: Record<keyof QuantitativeAxes, string> = {
   innovation: "Innovation",
   execution: "Execution",
@@ -22,6 +35,149 @@ const axisLabels: Record<keyof QuantitativeAxes, string> = {
   adoption: "Adoption",
   strategic_fit: "Strategic fit",
 };
+
+function QuantSummaryPanel({
+  title,
+  summary,
+}: {
+  title: string;
+  summary: QuantitativeAxes | null | undefined;
+}) {
+  if (!summary) return null;
+
+  return (
+    <section className="metrics-panel">
+      <p className="eyebrow">{title}</p>
+      <div className="metrics-grid">
+        {Object.entries(summary).map(([axis, score]) => (
+          <article className="metric-card" key={axis}>
+            <span>{axisLabels[axis as keyof QuantitativeAxes]}</span>
+            <strong>{score}/100</strong>
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function NarrativePanel({
+  mode,
+  narrative,
+}: {
+  mode: AnalysisMode;
+  narrative: ComprehensiveNarrative | MarketNarrative | null | undefined;
+}) {
+  if (!narrative) return null;
+
+  if (mode === "comprehensive") {
+    const report = narrative as ComprehensiveNarrative;
+    return (
+      <section className="metrics-panel">
+        <p className="eyebrow">Comprehensive report</p>
+        <div className="narrative-grid">
+          <article className="metric-card wide">
+            <span>Decision basis</span>
+            <p>{report.decision_basis}</p>
+          </article>
+          <article className="metric-card wide">
+            <span>Why rejected</span>
+            <ul className="narrative-list">
+              {report.why_rejected.map((item) => (
+                <li key={item}>{item}</li>
+              ))}
+            </ul>
+          </article>
+          <article className="metric-card wide">
+            <span>Improvements</span>
+            <ul className="narrative-list">
+              {report.improvements.map((item) => (
+                <li key={item}>{item}</li>
+              ))}
+            </ul>
+          </article>
+          <article className="metric-card wide">
+            <span>Suggestions</span>
+            <ul className="narrative-list">
+              {report.suggestions.map((item) => (
+                <li key={item}>{item}</li>
+              ))}
+            </ul>
+          </article>
+        </div>
+      </section>
+    );
+  }
+
+  if (mode === "market") {
+    const report = narrative as MarketNarrative;
+    return (
+      <section className="metrics-panel">
+        <p className="eyebrow">Market sentiment report</p>
+        <div className="narrative-grid">
+          <article className="metric-card wide">
+            <span>Sentiment take</span>
+            <p>{report.sentiment_take}</p>
+          </article>
+          <article className="metric-card wide">
+            <span>Market risks</span>
+            <ul className="narrative-list">
+              {report.market_risks.map((item) => (
+                <li key={item}>{item}</li>
+              ))}
+            </ul>
+          </article>
+          <article className="metric-card wide">
+            <span>Market opportunities</span>
+            <ul className="narrative-list">
+              {report.market_opportunities.map((item) => (
+                <li key={item}>{item}</li>
+              ))}
+            </ul>
+          </article>
+          <article className="metric-card wide">
+            <span>Timing note</span>
+            <p>{report.timing_note}</p>
+          </article>
+        </div>
+      </section>
+    );
+  }
+
+  return null;
+}
+
+function MarketPanel({ snapshot }: { snapshot: MarketSnapshot | null | undefined }) {
+  if (!snapshot) return null;
+
+  return (
+    <section className="metrics-panel">
+      <p className="eyebrow">Market snapshot</p>
+      <div className="metrics-grid">
+        <article className="metric-card">
+          <span>Market mood</span>
+          <strong>{snapshot.market_mood}</strong>
+        </article>
+        <article className="metric-card">
+          <span>Market cap signal</span>
+          <strong>{snapshot.market_cap_signal}/100</strong>
+        </article>
+        <article className="metric-card">
+          <span>Volume signal</span>
+          <strong>{snapshot.volume_signal}/100</strong>
+        </article>
+      </div>
+      <div className="market-assets">
+        {Object.entries(snapshot.top_assets).map(([symbol, asset]) => (
+          <article className="metric-card" key={symbol}>
+            <span>{symbol}</span>
+            <strong>${asset.price.toLocaleString()}</strong>
+            <p>24h range position: {asset.range_position}/100</p>
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+}
 
 export default function CasePage() {
   const params = useParams<{ caseId: string }>();
@@ -53,6 +209,7 @@ export default function CasePage() {
   }
 
   const data = courtCase.data;
+  const showsAxes = data.analysis_mode !== "standard";
 
   return (
     <main className="court-shell verdict-shell">
@@ -64,7 +221,7 @@ export default function CasePage() {
       <section className="verdict-header">
         <p className="eyebrow">Case #{data.case_id}</p>
         <h1>{data.verdict}</h1>
-        <span className="mode-badge">{data.analysis_mode === "critical" ? "Critical analysis" : "Standard verdict"}</span>
+        <span className="mode-badge">{modeLabel(data.analysis_mode)}</span>
         <div className="score-medallion">
           <strong>{data.final_score}</strong>
           <span>/100</span>
@@ -77,19 +234,12 @@ export default function CasePage() {
         <blockquote>{data.case_text}</blockquote>
       </section>
 
-      {data.analysis_mode === "critical" && data.critical_summary && (
-        <section className="metrics-panel">
-          <p className="eyebrow">Critical summary</p>
-          <div className="metrics-grid">
-            {Object.entries(data.critical_summary).map(([axis, score]) => (
-              <article className="metric-card" key={axis}>
-                <span>{axisLabels[axis as keyof QuantitativeAxes]}</span>
-                <strong>{score}/100</strong>
-              </article>
-            ))}
-          </div>
-        </section>
-      )}
+      <QuantSummaryPanel
+        title={data.analysis_mode === "market" ? "Quantitative market summary" : "Quantitative summary"}
+        summary={data.quant_summary}
+      />
+      <NarrativePanel mode={data.analysis_mode} narrative={data.narrative_summary} />
+      <MarketPanel snapshot={data.market_snapshot} />
 
       <section className="verdict-grid" aria-label="Judge scores">
         {judges.map((judge) => {
@@ -112,7 +262,7 @@ export default function CasePage() {
                 <span style={{ width: `${score}%` }} />
               </div>
               <p className="key-point">{evaluation?.key_point ?? judge.profile}</p>
-              {data.analysis_mode === "critical" && evaluation?.quantitative_axes && (
+              {showsAxes && evaluation?.quantitative_axes && (
                 <div className="judge-axes">
                   {Object.entries(evaluation.quantitative_axes).map(([axis, axisScore]) => (
                     <div className="axis-chip" key={axis}>

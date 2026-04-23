@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { FormEvent, useMemo, useState } from "react";
 import { judges } from "@/lib/judges";
+import type { AnalysisMode } from "@/lib/contracts/types";
 import { getContractAddress } from "@/lib/genlayer/client";
 import { useWallet } from "@/lib/genlayer/wallet";
 import { useSubmitCase } from "@/lib/hooks/useSupremeHighCryptoCourt";
@@ -26,7 +27,7 @@ function GavelMark() {
   );
 }
 
-function DeliberationCurtain({ active, mode }: { active: boolean; mode: "standard" | "critical" }) {
+function DeliberationCurtain({ active, mode }: { active: boolean; mode: AnalysisMode }) {
   if (!active) {
     return null;
   }
@@ -41,7 +42,13 @@ function DeliberationCurtain({ active, mode }: { active: boolean; mode: "standar
         <h2>The jury is deliberating.</h2>
         <p>Eight judge profiles are weighing the case through GenLayer consensus.</p>
         <p className="deliberation-mode">
-          {mode === "critical" ? "Critical analysis chamber" : "Standard verdict chamber"}
+          {mode === "critical"
+            ? "Critical analysis chamber"
+            : mode === "comprehensive"
+              ? "Comprehensive analysis chamber"
+              : mode === "market"
+                ? "Market sentiment chamber"
+                : "Standard verdict chamber"}
         </p>
         <div className="thinking-row">
           {judges.map((judge, index) => (
@@ -57,7 +64,7 @@ function DeliberationCurtain({ active, mode }: { active: boolean; mode: "standar
 
 export default function Home() {
   const [caseText, setCaseText] = useState("");
-  const [pendingMode, setPendingMode] = useState<"standard" | "critical">("standard");
+  const [pendingMode, setPendingMode] = useState<AnalysisMode>("standard");
   const wallet = useWallet();
   const submitCase = useSubmitCase();
   const contractAddress = getContractAddress();
@@ -67,7 +74,7 @@ export default function Home() {
     return trimmedLength >= 50 && trimmedLength <= 2000 && wallet.isConnected && !!contractAddress;
   }, [trimmedLength, wallet.isConnected, contractAddress]);
 
-  const submit = (mode: "standard" | "critical") => {
+  const submit = (mode: AnalysisMode) => {
     if (!canSubmit) {
       return;
     }
@@ -176,6 +183,24 @@ export default function Home() {
                   onClick={() => submit("critical")}
                 >
                   {submitCase.isPending && pendingMode === "critical" ? "Running analysis..." : "Critical analysis"}
+                </button>
+                <button
+                  type="button"
+                  className="secondary-action"
+                  disabled={!canSubmit || submitCase.isPending}
+                  onClick={() => submit("comprehensive")}
+                >
+                  {submitCase.isPending && pendingMode === "comprehensive"
+                    ? "Building report..."
+                    : "Comprehensive analysis"}
+                </button>
+                <button
+                  type="button"
+                  className="secondary-action"
+                  disabled={!canSubmit || submitCase.isPending}
+                  onClick={() => submit("market")}
+                >
+                  {submitCase.isPending && pendingMode === "market" ? "Reading market..." : "Market Sentiment"}
                 </button>
               </div>
             </div>
